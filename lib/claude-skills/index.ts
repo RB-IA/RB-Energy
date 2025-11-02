@@ -177,7 +177,7 @@ function normalizeInstructions(
   if (Array.isArray(instructions)) {
     return instructions.map((line) => String(line ?? "").trim()).join("\n");
   }
-  if (typeof instructions === "object" && instructions.body) {
+  if (typeof instructions === "object" && !Array.isArray(instructions) && "body" in instructions) {
     return String(instructions.body).trim();
   }
   return "";
@@ -208,25 +208,13 @@ function normalizeArguments(
     const normalized: ClaudeSkillArgumentSchema = {
       type,
       description,
+      ...(typeof schema.required === "boolean" && { required: schema.required }),
+      ...(schema.default !== undefined && isPrimitive(schema.default) && { default: schema.default as ClaudeSkillPrimitive }),
+      ...(Array.isArray(schema.enum) && schema.enum.every(isPrimitive) && { enum: schema.enum as ClaudeSkillPrimitive[] }),
+      ...(typeof schema.minimum === "number" && { minimum: schema.minimum }),
+      ...(typeof schema.maximum === "number" && { maximum: schema.maximum }),
+      ...(typeof schema.pattern === "string" && schema.pattern && { pattern: schema.pattern }),
     };
-    if (typeof schema.required === "boolean") {
-      normalized.required = schema.required;
-    }
-    if (schema.default !== undefined && isPrimitive(schema.default)) {
-      normalized.default = schema.default as ClaudeSkillPrimitive;
-    }
-    if (Array.isArray(schema.enum) && schema.enum.every(isPrimitive)) {
-      normalized.enum = schema.enum as ClaudeSkillPrimitive[];
-    }
-    if (typeof schema.minimum === "number") {
-      normalized.minimum = schema.minimum;
-    }
-    if (typeof schema.maximum === "number") {
-      normalized.maximum = schema.maximum;
-    }
-    if (typeof schema.pattern === "string" && schema.pattern) {
-      normalized.pattern = schema.pattern;
-    }
     result[key] = normalized;
   }
 

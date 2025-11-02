@@ -612,7 +612,7 @@ function validateClaudeSkillArguments(
       provided,
       name
     );
-    let value = hasExplicitValue ? provided[name] : schema.default;
+    const value = hasExplicitValue ? provided[name] : schema.default;
 
     if (value === undefined || value === null) {
       if (schema.required) {

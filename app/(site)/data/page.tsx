@@ -34,7 +34,7 @@ type SqlResponse = {
 
 const DEFAULT_SQL = "SELECT * FROM \"_catalog\" ORDER BY table_name LIMIT 50;";
 
-export default function DataPage(): JSX.Element {
+export default function DataPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);

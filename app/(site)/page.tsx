@@ -26,7 +26,7 @@ type SqlResult = {
   truncated: boolean;
 };
 
-export default function ChatPage(): JSX.Element {
+export default function ChatPage() {
   const vegaModuleRef = useRef<Promise<VegaEmbedModule> | null>(null);
 
   useEffect(() => {
