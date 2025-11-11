@@ -35,8 +35,8 @@ type ErrorState = {
 
 type WidgetAction = {
   type: string;
-  payload?: Record<string, unknown>;
   values?: Record<string, unknown>;
+  payload?: Record<string, unknown>;
 };
 
 const isBrowser = typeof window !== "undefined";
@@ -59,12 +59,8 @@ export function ChatKitPanel({
   const [errors, setErrors] = useState<ErrorState>(() => createInitialErrors());
   const [isInitializingSession, setIsInitializingSession] = useState(true);
   const isMountedRef = useRef(true);
-  const [scriptStatus, setScriptStatus] = useState<
-    "pending" | "ready" | "error"
-  >(() =>
-    isBrowser && window.customElements?.get("openai-chatkit")
-      ? "ready"
-      : "pending"
+  const [scriptStatus, setScriptStatus] = useState<"pending" | "ready" | "error">(
+    () => (isBrowser && window.customElements?.get("openai-chatkit") ? "ready" : "pending")
   );
   const [widgetInstanceKey, setWidgetInstanceKey] = useState(0);
 
@@ -94,15 +90,12 @@ export function ChatKitPanel({
       if (!isMountedRef.current) return;
       setScriptStatus("error");
       const detail = (event as CustomEvent<unknown>)?.detail ?? "unknown error";
-      setErrorState({ script: `Error: ${detail}`, retryable: false });
+      setErrorState({ script: `Error: ${String(detail)}`, retryable: false });
       setIsInitializingSession(false);
     };
 
     window.addEventListener("chatkit-script-loaded", handleLoaded);
-    window.addEventListener(
-      "chatkit-script-error",
-      handleError as EventListener
-    );
+    window.addEventListener("chatkit-script-error", handleError as EventListener);
 
     if (window.customElements?.get("openai-chatkit")) {
       handleLoaded();
@@ -121,10 +114,7 @@ export function ChatKitPanel({
 
     return () => {
       window.removeEventListener("chatkit-script-loaded", handleLoaded);
-      window.removeEventListener(
-        "chatkit-script-error",
-        handleError as EventListener
-      );
+      window.removeEventListener("chatkit-script-error", handleError as EventListener);
       if (timeoutId) window.clearTimeout(timeoutId);
     };
   }, [scriptStatus, setErrorState]);
@@ -166,8 +156,7 @@ export function ChatKitPanel({
       }
 
       if (!isWorkflowConfigured) {
-        const detail =
-          "Set NEXT_PUBLIC_CHATKIT_WORKFLOW_ID in your .env.local file.";
+        const detail = "Set NEXT_PUBLIC_CHATKIT_WORKFLOW_ID in your .env.local file.";
         if (isMountedRef.current) {
           setErrorState({ session: detail, retryable: false });
           setIsInitializingSession(false);
@@ -186,7 +175,10 @@ export function ChatKitPanel({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             workflow: { id: WORKFLOW_ID },
-            chatkit_configuration: { file_upload: { enabled: true } },
+            chatkit_configuration: {
+              // enable attachments
+              file_upload: { enabled: true },
+            },
           }),
         });
 
@@ -219,7 +211,9 @@ export function ChatKitPanel({
         }
 
         const clientSecret = data?.client_secret as string | undefined;
-        if (!clientSecret) throw new Error("Missing client secret in response");
+        if (!clientSecret) {
+          throw new Error("Missing client secret in response");
+        }
 
         if (isMountedRef.current) {
           setErrorState({ session: null, integration: null });
@@ -245,32 +239,25 @@ export function ChatKitPanel({
     [isWorkflowConfigured, setErrorState]
   );
 
-  // ---- ChatKit initialization with widget handler ----
   const { control, setComposerValue, focusComposer } = useChatKit({
     locale: "de-DE",
     api: { getClientSecret },
-    theme: {
-      colorScheme: _theme,
-      ...getThemeConfig(_theme),
-    },
+    theme: { colorScheme: "light", ...getThemeConfig("light") },
     startScreen: { greeting: GREETING, prompts: STARTER_PROMPTS },
     composer: {
       placeholder: PLACEHOLDER_INPUT,
       attachments: { enabled: true },
     },
+    // Handle widget button "In Eingabefeld übernehmen"
     widgets: {
       onAction: async (action: WidgetAction) => {
         if (action.type === "prompt.insert") {
-          const fromValues = action.values?.prompt_text;
-          const fromPayload = action.payload?.prompt_text;
-          const raw =
-            typeof fromValues === "string"
-              ? fromValues
-              : typeof fromPayload === "string"
-              ? fromPayload
+          const text =
+            typeof action.values?.prompt_text === "string"
+              ? action.values.prompt_text
               : "";
-          if (raw.trim()) {
-            await setComposerValue({ text: raw });
+          if (text.trim()) {
+            await setComposerValue({ text });
             await focusComposer();
           }
         }
