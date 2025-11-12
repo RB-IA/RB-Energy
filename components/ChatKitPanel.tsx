@@ -317,56 +317,6 @@ export function ChatKitPanel({
     },
     onResponseEnd: () => {
       onResponseEnd();
-    },
-    onResponseStart: () => {
-      setErrorState({ integration: null, retryable: false });
-    },
-    onThreadChange: () => {
-      processedFacts.current.clear();
-      resetToolEvents();
-    },
-    onError: ({ error }: { error: unknown }) => {
-      console.error("ChatKit error", error);
-    },
-  });
-
-  useEffect(() => {
-    if (!control) return;
-
-    const handleLog = (event: Event) => {
-      const detail = (event as CustomEvent<ChatKitLogDetail>).detail;
-      if (!detail) return;
-      appendToolEvent(createToolTraceEvent(detail));
-    };
-
-    const handleError = (event: Event) => {
-      const detail = (event as CustomEvent<{ error: Error }>).detail;
-      appendToolEvent({
-        id: createTraceId(),
-        timestamp: Date.now(),
-        name: "chatkit.error",
-        summary: detail?.error?.message ?? "ChatKit error",
-        status: "error",
-        payload: detail?.error
-          ? {
-              message: detail.error.message,
-              stack: detail.error.stack ?? null,
-            }
-          : undefined,
-      });
-    };
-
-    const handleResponseStart = () => {
-      appendToolEvent({
-        id: createTraceId(),
-        timestamp: Date.now(),
-        name: "chatkit.response.start",
-        summary: "Assistant response started",
-        status: "info",
-      });
-    };
-
-    const handleResponseEnd = () => {
       appendToolEvent({
         id: createTraceId(),
         timestamp: Date.now(),
@@ -374,32 +324,40 @@ export function ChatKitPanel({
         summary: "Assistant response completed",
         status: "success",
       });
-    };
-
-    control.addEventListener("chatkit.log", handleLog as EventListener);
-    control.addEventListener("chatkit.error", handleError as EventListener);
-    control.addEventListener(
-      "chatkit.response.start",
-      handleResponseStart as EventListener
-    );
-    control.addEventListener(
-      "chatkit.response.end",
-      handleResponseEnd as EventListener
-    );
-
-    return () => {
-      control.removeEventListener("chatkit.log", handleLog as EventListener);
-      control.removeEventListener("chatkit.error", handleError as EventListener);
-      control.removeEventListener(
-        "chatkit.response.start",
-        handleResponseStart as EventListener
-      );
-      control.removeEventListener(
-        "chatkit.response.end",
-        handleResponseEnd as EventListener
-      );
-    };
-  }, [control, appendToolEvent]);
+    },
+    onResponseStart: () => {
+      setErrorState({ integration: null, retryable: false });
+      appendToolEvent({
+        id: createTraceId(),
+        timestamp: Date.now(),
+        name: "chatkit.response.start",
+        summary: "Assistant response started",
+        status: "info",
+      });
+    },
+    onThreadChange: () => {
+      processedFacts.current.clear();
+      resetToolEvents();
+    },
+    onError: ({ error }: { error: unknown }) => {
+      console.error("ChatKit error", error);
+      const err = error instanceof Error ? error : new Error(String(error));
+      appendToolEvent({
+        id: createTraceId(),
+        timestamp: Date.now(),
+        name: "chatkit.error",
+        summary: err.message || "ChatKit error",
+        status: "error",
+        payload: {
+          message: err.message,
+          stack: err.stack ?? null,
+        },
+      });
+    },
+    onLog: (detail: ChatKitLogDetail) => {
+      appendToolEvent(createToolTraceEvent(detail));
+    },
+  });
 
   const handleInsertPrompt = useCallback(
     async (text: string) => {
