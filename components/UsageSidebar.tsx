@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { formatCost, formatTokens } from "@/lib/pricing";
 
@@ -37,12 +37,14 @@ interface SessionHistory {
 interface UsageSidebarProps {
   isOpen: boolean;
   currentSessionId?: string;
+  sessionTokens?: number;
   onSessionUpdate?: (stats: CurrentSession) => void;
 }
 
 export default function UsageSidebar({
   isOpen,
   currentSessionId,
+  sessionTokens = 0,
 }: UsageSidebarProps) {
   const [dailyStats, setDailyStats] = useState<DailyStats[]>([]);
   const [currentSession, setCurrentSession] = useState<CurrentSession | null>(null);
@@ -55,7 +57,7 @@ export default function UsageSidebar({
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<"7" | "30">("7");
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
       const url = `/api/usage/stats?period=${period}${
@@ -74,7 +76,7 @@ export default function UsageSidebar({
     } finally {
       setLoading(false);
     }
-  };
+  }, [period, currentSessionId]);
 
   const fetchHistory = async () => {
     try {
@@ -94,7 +96,18 @@ export default function UsageSidebar({
       fetchStats();
       fetchHistory();
     }
-  }, [isOpen, period, currentSessionId]);
+  }, [isOpen, period, currentSessionId, fetchStats]);
+
+  // Auto-refresh every 10 seconds when open
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const interval = setInterval(() => {
+      void fetchStats();
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(interval);
+  }, [isOpen, fetchStats]);
 
   if (!isOpen) return null;
 
@@ -117,11 +130,34 @@ export default function UsageSidebar({
           </div>
         ) : (
           <div className="p-4 space-y-4">
-            {/* Current Session */}
-            {currentSession && (
+            {/* Current Session - Live Tracking */}
+            {sessionTokens > 0 && (
               <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
                 <h3 className="text-xs font-medium text-gray-600 mb-2">
                   Aktuelle Sitzung
+                </h3>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-600">Gesamt Tokens:</span>
+                    <span className="font-semibold text-gray-900 text-sm">
+                      {formatTokens(sessionTokens)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs pt-1.5 border-t border-gray-200">
+                    <span className="text-gray-600">Geschätzte Kosten:</span>
+                    <span className="font-semibold text-gray-900">
+                      {formatCost((sessionTokens / 1_000_000) * 0.375)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Database Session Info (if available) */}
+            {currentSession && (
+              <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
+                <h3 className="text-xs font-medium text-gray-600 mb-2">
+                  Sitzungsverlauf
                 </h3>
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs">

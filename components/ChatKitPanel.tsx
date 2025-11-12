@@ -22,7 +22,7 @@ export type FactAction = {
 type ChatKitPanelProps = {
   theme: ColorScheme;
   onWidgetAction: (action: FactAction) => Promise<void>;
-  onResponseEnd: (sessionId?: string) => void;
+  onResponseEnd: (sessionId?: string, tokens?: number) => void;
   onThemeRequest: (scheme: ColorScheme) => void;
   onInsertPrompt?: (text: string) => Promise<void>;
 };
@@ -66,6 +66,7 @@ export function ChatKitPanel({
   );
   const [widgetInstanceKey, setWidgetInstanceKey] = useState(0);
   const sessionIdRef = useRef<string | null>(null);
+  const responseCountRef = useRef(0);
 
   const setErrorState = useCallback((updates: Partial<ErrorState>) => {
     setErrors((current) => ({ ...current, ...updates }));
@@ -308,7 +309,11 @@ export function ChatKitPanel({
       return { success: false };
     },
     onResponseEnd: () => {
-      onResponseEnd(sessionIdRef.current ?? undefined);
+      responseCountRef.current += 1;
+      // Estimate tokens (rough average for a typical exchange)
+      // This is a placeholder until we can access actual usage data
+      const estimatedTokens = 150; // Average tokens per response
+      onResponseEnd(sessionIdRef.current ?? undefined, estimatedTokens);
     },
     onResponseStart: () => {
       setErrorState({ integration: null, retryable: false });

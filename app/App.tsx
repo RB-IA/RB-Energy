@@ -13,6 +13,7 @@ type SidebarMode = "none" | "templates" | "usage";
 export default function App() {
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>("none");
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>();
+  const [sessionTokens, setSessionTokens] = useState(0);
 
   useEffect(() => {
     if (typeof document === "undefined") {
@@ -43,12 +44,32 @@ export default function App() {
     }
   }, []);
 
-  const handleResponseEnd = useCallback((sessionId?: string) => {
+  const handleResponseEnd = useCallback(async (sessionId?: string, tokens?: number) => {
     if (process.env.NODE_ENV !== "production") {
-      console.debug("[ChatKitPanel] response end", sessionId);
+      console.debug("[ChatKitPanel] response end", sessionId, tokens);
     }
     if (sessionId) {
       setCurrentSessionId(sessionId);
+    }
+    if (tokens && sessionId) {
+      setSessionTokens(prev => prev + tokens);
+
+      // Report usage to server for tracking
+      try {
+        await fetch("/api/usage/report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId,
+            model: "gpt-4o-mini", // Default model, should be passed from ChatKit if available
+            promptTokens: Math.floor(tokens * 0.4), // Rough estimate: 40% input, 60% output
+            completionTokens: Math.ceil(tokens * 0.6),
+            totalTokens: tokens,
+          }),
+        });
+      } catch (error) {
+        console.error("Failed to report usage:", error);
+      }
     }
   }, []);
 
@@ -116,6 +137,7 @@ export default function App() {
             <UsageSidebar
               isOpen={true}
               currentSessionId={currentSessionId}
+              sessionTokens={sessionTokens}
             />
           </div>
         )}
