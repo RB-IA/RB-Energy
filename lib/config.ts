@@ -7,15 +7,30 @@ export const CREATE_SESSION_ENDPOINT = "/api/create-session";
 
 export const STARTER_PROMPTS: StartScreenPrompt[] = [
   {
-    label: "What can you do?",
-    prompt: "What can you do?",
-    icon: "circle-question",
+    label: "What makes a strong VC pitch?",
+    prompt: "What makes a strong VC pitch?",
+    icon: "lightbulb",
+  },
+  {
+    label: "Explain TAM, SAM, and SOM",
+    prompt: "Can you explain TAM, SAM, and SOM in venture capital?",
+    icon: "chart-line",
+  },
+  {
+    label: "What are key metrics VCs look for?",
+    prompt: "What are the key metrics and KPIs that VCs look for in startups?",
+    icon: "chart-pie",
+  },
+  {
+    label: "Tell me about valuation methods",
+    prompt: "What are the common valuation methods used in venture capital?",
+    icon: "money-bill-trend-up",
   },
 ];
 
-export const PLACEHOLDER_INPUT = "Ask anything...";
+export const PLACEHOLDER_INPUT = "Ask me anything about venture capital...";
 
-export const GREETING = "How can I help you today?";
+export const GREETING = "I'm your VC expert with access to 200+ reports, lectures, and authoritative sources. How can I help you today?";
 
 export const getThemeConfig = (theme: ColorScheme): ThemeOption => ({
   color: {
